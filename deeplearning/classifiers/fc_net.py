@@ -201,10 +201,19 @@ class FullyConnectedNet(object):
 
         self.params['b1'] = np.zeros(hidden_dims[0])
 
+        if self.use_batchnorm:
+          self.params['gamma1'] = np.ones(hidden_dims[0])
+
+          self.params['beta1'] = np.zeros(hidden_dims[0])
 
         #Hidden_dims goes from 0 to N - 2
         for i in np.arange(1, len(hidden_dims)):
           cur_layer = i + 1
+
+          if self.use_batchnorm:
+            self.params[f'gamma{cur_layer}'] = np.ones(hidden_dims[i])
+
+            self.params[f'beta{cur_layer}'] = np.zeros(hidden_dims[i])
 
           self.params[f'W{cur_layer}'] = np.random.normal(loc = 0, scale = weight_scale, size = (hidden_dims[i-1], hidden_dims[i]))
 
@@ -217,7 +226,7 @@ class FullyConnectedNet(object):
         self.params[f'W{fin_layer}'] = np.random.normal(loc = 0, scale = weight_scale, size = (hidden_dims[-1], num_classes))
 
         self.params[f'b{fin_layer}'] = np.zeros(num_classes)
-
+        
 
         
 
@@ -287,8 +296,14 @@ class FullyConnectedNet(object):
 
         #i -> 1 to N-1
         for i in np.arange(1,self.num_layers):
-
-          outputs[i], cache[i] = affine_relu_forward(outputs[i-1], self.params[f'W{i}'], self.params[f'b{i}'])
+          if self.use_batchnorm and self.use_dropout:
+            outputs[i], cache[i] = affine_relu_bn_do_forward(outputs[i-1], self.params[f'W{i}'], self.params[f'b{i}'], self.params[f'gamma{i}'], self.params[f'beta{i}'], self.bn_params[i-1], self.dropout_param)
+          elif self.use_batchnorm and not self.use_dropout:
+            outputs[i], cache[i] = affine_relu_bn_forward(outputs[i-1], self.params[f'W{i}'], self.params[f'b{i}'], self.params[f'gamma{i}'], self.params[f'beta{i}'], self.bn_params[i-1])
+          elif self.use_dropout and not self.use_batchnorm:
+            outputs[i], cache[i] = affine_relu_do_forward(outputs[i-1], self.params[f'W{i}'], self.params[f'b{i}'], self.dropout_param)
+          else:
+            outputs[i], cache[i] = affine_relu_forward(outputs[i-1], self.params[f'W{i}'], self.params[f'b{i}'])
 
         #Nth layer
         fin_layer = self.num_layers
@@ -337,18 +352,39 @@ class FullyConnectedNet(object):
         dw = {}
 
         db = {}
+
+        if self.use_batchnorm:
+          dgamma = {}
+
+          dbeta = {}
+
+        
         dx[self.num_layers], dw[self.num_layers], db[self.num_layers] = affine_backward(dL, cache[self.num_layers])
+        
+        
 
         for i in np.flip(np.arange(1,self.num_layers)):
           d = dx[i+1]
           c = cache[i]
-          dx[i], dw[i], db[i] = affine_relu_backward(d, c)
+          if self.use_dropout and self.use_batchnorm:
+            dx[i], dw[i], db[i], dgamma[i], dbeta[i] = affine_relu_bn_do_backward(d, c)
+          elif self.use_dropout and not self.use_batchnorm:
+            dx[i], dw[i], db[i] = affine_relu_do_backward(d, c)
+          elif not self.use_dropout and self.use_batchnorm:
+            dx[i], dw[i], db[i], dgamma[i], dbeta[i] = affine_relu_bn_backward(d, c)
+          else:
+            dx[i], dw[i], db[i] = affine_relu_backward(d, c)
 
 
         for i in np.arange(1, self.num_layers + 1):
           grads[f'W{i}'] = dw[i] + self.reg * self.params[f'W{i}']
 
           grads[f'b{i}'] = db[i]
+
+          if self.use_batchnorm and i < self.num_layers:
+
+            grads[f'gamma{i}'] = dgamma[i] 
+            grads[f'beta{i}'] = dbeta[i]
 
         
 
