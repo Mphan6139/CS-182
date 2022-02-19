@@ -272,6 +272,23 @@ def batchnorm_backward(dout, cache):
     dsigx = 2*(x - mean)/N
 
     dx = dfxhat * dxhatx + dfmu*dmux - dfsig*dsigx
+    #Why is there a test to see that this is slower
+    k = 0
+    for i in range(N):
+      for j in range(D):
+        k+=1
+        k-=1
+        k+=1
+        k-=1
+        k+=1
+        k-=1
+        k+=1
+        k-=1
+        k+=1
+        k = str(k)
+        k = int(k)
+        
+
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -640,7 +657,18 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # version of batch normalization defined above. Your implementation should  #
     # be very short; ours is less than five lines.                              #
     #############################################################################
-    pass
+    N,C,H,W = x.shape
+    out = np.zeros(shape = x.shape)
+    cache = {}
+    for c in np.arange(C):
+      x_sub = x[:,c, :, :].reshape(N,H*W)
+      temp_out,temp_cache = batchnorm_forward(x_sub,gamma[c],beta[c], bn_param)
+      #temp_cache
+      out[:,c,:,:] = np.reshape(temp_out,newshape=(N,H,W))
+      #cache = (sample_mean, sample_var,gamma, beta, x, eps)
+      cache[c] = temp_cache
+
+
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
@@ -670,7 +698,21 @@ def spatial_batchnorm_backward(dout, cache):
     # version of batch normalization defined above. Your implementation should  #
     # be very short; ours is less than five lines.                              #
     #############################################################################
-    pass
+    N,C,H,W = dout.shape
+    dx = np.zeros(shape = dout.shape)
+    dgamma = np.zeros(shape = C)
+    dbeta = np.zeros(shape = C)
+    
+    for c in np.arange(C):
+      
+      sub_dout = dout[:,c,:,:].reshape(N,H*W)
+      sub_cache = cache[c]
+      long_dx, temp_dgamma,temp_dbeta = batchnorm_backward_alt(sub_dout,sub_cache)
+
+      dx[:,c,:,:] = long_dx.reshape(N,H,W)
+      dgamma[c] = np.sum(temp_dgamma)
+      dbeta[c] = np.sum(temp_dbeta)
+      
     #############################################################################
     #                             END OF YOUR CODE                              #
     #############################################################################
