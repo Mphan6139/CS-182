@@ -658,12 +658,13 @@ def spatial_batchnorm_forward(x, gamma, beta, bn_param):
     # be very short; ours is less than five lines.                              #
     #############################################################################
     N,C,H,W = x.shape
+    
+
     out = np.zeros(shape = x.shape)
     cache = {}
     for c in np.arange(C):
       x_sub = x[:,c, :, :].reshape(N,H*W)
       temp_out,temp_cache = batchnorm_forward(x_sub,gamma[c],beta[c], bn_param)
-      #temp_cache
       out[:,c,:,:] = np.reshape(temp_out,newshape=(N,H,W))
       #cache = (sample_mean, sample_var,gamma, beta, x, eps)
       cache[c] = temp_cache
