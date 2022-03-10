@@ -1,4 +1,5 @@
 import numpy as np
+
 try:
     from deeplearning.im2col_cython import col2im_cython, im2col_cython
     from deeplearning.im2col_cython import col2im_6d_cython
@@ -24,8 +25,8 @@ def conv_forward_im2col(x, w, b, conv_param):
     assert (H + 2 * pad - filter_height) % stride == 0, 'height does not work'
 
     # Create output
-    out_height = (H + 2 * pad - filter_height) // stride + 1
-    out_width = (W + 2 * pad - filter_width) // stride + 1
+    out_height = (H + 2 * pad - filter_height) / stride + 1
+    out_width = (W + 2 * pad - filter_width) / stride + 1
     out = np.zeros((N, num_filters, out_height, out_width), dtype=x.dtype)
 
     # x_cols = im2col_indices(x, w.shape[2], w.shape[3], pad, stride)
@@ -45,8 +46,8 @@ def conv_forward_strides(x, w, b, conv_param):
     stride, pad = conv_param['stride'], conv_param['pad']
 
     # Check dimensions
-    #assert (W + 2 * pad - WW) % stride == 0, 'width does not work'
-    #assert (H + 2 * pad - HH) % stride == 0, 'height does not work'
+    assert (W + 2 * pad - WW) % stride == 0, 'width does not work'
+    assert (H + 2 * pad - HH) % stride == 0, 'height does not work'
 
     # Pad the input
     p = pad
@@ -63,7 +64,7 @@ def conv_forward_strides(x, w, b, conv_param):
     strides = (H * W, W, 1, C * H * W, stride * W, stride)
     strides = x.itemsize * np.array(strides)
     x_stride = np.lib.stride_tricks.as_strided(x_padded,
-                  shape=shape, strides=strides)
+                                               shape=shape, strides=strides)
     x_cols = np.ascontiguousarray(x_stride)
     x_cols.shape = (C * HH * WW, N * out_h * out_w)
 
@@ -235,8 +236,8 @@ def max_pool_forward_im2col(x, pool_param):
     assert (H - pool_height) % stride == 0, 'Invalid height'
     assert (W - pool_width) % stride == 0, 'Invalid width'
 
-    out_height = (H - pool_height) // stride + 1
-    out_width = (W - pool_width) // stride + 1
+    out_height = (H - pool_height) / stride + 1
+    out_width = (W - pool_width) / stride + 1
 
     x_split = x.reshape(N * C, 1, H, W)
     x_cols = im2col(x_split, pool_height, pool_width, padding=0, stride=stride)
@@ -264,7 +265,7 @@ def max_pool_backward_im2col(dout, cache):
     dx_cols = np.zeros_like(x_cols)
     dx_cols[x_cols_argmax, np.arange(dx_cols.shape[1])] = dout_reshaped
     dx = col2im_indices(dx_cols, (N * C, 1, H, W), pool_height, pool_width,
-                padding=0, stride=stride)
+                        padding=0, stride=stride)
     dx = dx.reshape(x.shape)
 
     return dx
