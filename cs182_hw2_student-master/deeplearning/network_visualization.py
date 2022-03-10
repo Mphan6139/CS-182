@@ -31,12 +31,16 @@ def compute_saliency_maps(X, y, model):
     # to each input image. You first want to compute the loss over the correct   #
     # scores, and then compute the gradients with torch.autograd.gard.           #
     ##############################################################################
-    y = model(X)
-    scores,_ = torch.max(y,dim = 1)
-    scores.sum().backward()
-    grad = torch.abs(X.grad)
-    saliency,_  = torch.max(grad,dim = 1)
-
+    scores = model(X)
+    labels_scores = scores.gather(1, y.view(-1, 1)).squeeze()
+    
+    loss = torch.sum(labels_scores)
+    loss.backward()
+    
+    grads = X.grad.data
+    grads = grads.abs()
+    saliency, _ = grads.max(dim=1)
+    
 
 
     ##############################################################################
@@ -137,10 +141,10 @@ def update_class_visulization(model, target_y, l2_reg, learning_rate, img):
     score.backward()
     grad = img.grad - 2*l2_reg * img
 
-    dx = learning_rate * grad / torch.linalg.norm(grad) 
+    img = img + learning_rate * grad
     
-    img = img - dx
-
+    
+    
     
     ########################################################################
     #                             END OF YOUR CODE                         #
