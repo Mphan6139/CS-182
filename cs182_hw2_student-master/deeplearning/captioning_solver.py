@@ -201,7 +201,7 @@ class CaptioningSolver(object):
         return acc
 
 
-    def train(self):
+    def train(self, eval):
         """
         Run optimization to train the model.
         """
@@ -212,10 +212,14 @@ class CaptioningSolver(object):
         for t in range(num_iterations):
             self._step()
 
-            # Maybe print training loss
+            # # Maybe print training loss
+            # if self.verbose and t % self.print_every == 0:
+            #     print('(Iteration %d / %d) loss: %f' % (
+            #            t + 1, num_iterations, self.loss_history[-1]))
+            # Maybe print validation
             if self.verbose and t % self.print_every == 0:
-                print('(Iteration %d / %d) loss: %f' % (
-                       t + 1, num_iterations, self.loss_history[-1]))
+              print('(Iteration %d / %d) loss: %f' % (t + 1, num_iterations, self.loss_history[-1]))
+              eval(self.model)
 
             # At the end of every epoch, increment the epoch counter and decay the
             # learning rate.
